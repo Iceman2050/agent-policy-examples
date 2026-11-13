@@ -1,0 +1,68 @@
+{
+  "applies_to": [
+    "purchase",
+    "book_service",
+    "pay_invoice"
+  ],
+  "description": "A MandateGuard-style envelope for a single delegated task: the task states its total budget (task_budget_usd in the case context) and the spend categories it covers (approved_categories). Any single action that would push the task's projected total spend over its budget is denied \u2014 the envelope is the mandate. Spend in a category the task did not approve needs human approval even when money remains. Within the envelope and an approved category, single actions over $50 still need approval; small in-envelope actions proceed.",
+  "fallback": "DENY",
+  "fallback_reason": "No rule matched (for example, category approval was not stated); the policy denies by default.",
+  "id": "task-spend-envelope",
+  "rules": [
+    {
+      "id": "envelope-exceeded-hard-deny",
+      "reason": "This action would push the task's total spend over the budget stated in its envelope (task_budget_usd).",
+      "verdict": "DENY",
+      "when": [
+        {
+          "field": "projected_task_total_usd",
+          "op": "gt",
+          "value_field": "task_budget_usd"
+        }
+      ]
+    },
+    {
+      "id": "unapproved-category-requires-approval",
+      "reason": "The spend category is not one this task's envelope approves, so a human must approve it.",
+      "verdict": "REQUIRE_APPROVAL",
+      "when": [
+        {
+          "field": "category_approved",
+          "op": "eq",
+          "value": false
+        }
+      ]
+    },
+    {
+      "id": "over-50-requires-approval",
+      "reason": "Single actions over $50 inside the envelope still require human approval.",
+      "verdict": "REQUIRE_APPROVAL",
+      "when": [
+        {
+          "field": "amount_usd",
+          "op": "gt",
+          "value": 50
+        }
+      ]
+    },
+    {
+      "id": "in-envelope-allow",
+      "reason": "Approved category, inside the envelope, at or under the $50 single-action threshold.",
+      "verdict": "ALLOW",
+      "when": [
+        {
+          "field": "category_approved",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "field": "amount_usd",
+          "op": "lte",
+          "value": 50
+        }
+      ]
+    }
+  ],
+  "title": "Task spend envelope \u2014 one task, one budget, approved categories only",
+  "version": "1.0.0"
+}

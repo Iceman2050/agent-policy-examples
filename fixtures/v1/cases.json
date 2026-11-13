@@ -1,0 +1,371 @@
+{
+  "version": "1.0.0",
+  "description": "Fixture test actions with expected verdicts for policies/v1. Every case names the rule expected to decide it (expected_rule null = the policy fallback decides). Run: python -m policy_examples",
+  "cases": [
+    {
+      "id": "refund-3-allow",
+      "policy": "customer-refunds",
+      "description": "Small refund, fresh day: inside the $5 auto threshold and the daily cap.",
+      "action": {
+        "type": "refund_customer",
+        "amount_usd": 3
+      },
+      "context": {
+        "daily_spent_usd": 0
+      },
+      "expected_verdict": "ALLOW",
+      "expected_rule": "small-refund-allow"
+    },
+    {
+      "id": "refund-5-boundary-allow",
+      "policy": "customer-refunds",
+      "description": "Boundary: exactly $5 is still auto-approved (rule is amount <= 5).",
+      "action": {
+        "type": "refund_customer",
+        "amount_usd": 5
+      },
+      "context": {
+        "daily_spent_usd": 0
+      },
+      "expected_verdict": "ALLOW",
+      "expected_rule": "small-refund-allow"
+    },
+    {
+      "id": "refund-12-requires-approval",
+      "policy": "customer-refunds",
+      "description": "The live AAG Policy Playground verdict for this policy shape: a $12 refund needs approval.",
+      "action": {
+        "type": "refund_customer",
+        "amount_usd": 12
+      },
+      "context": {
+        "daily_spent_usd": 0
+      },
+      "expected_verdict": "REQUIRE_APPROVAL",
+      "expected_rule": "over-5-requires-approval"
+    },
+    {
+      "id": "refund-25-deny-over-daily-cap",
+      "policy": "customer-refunds",
+      "description": "The live AAG Policy Playground verdict: a $25 refund is DENIED, not queued for approval, because it alone breaks the $20/day hard cap \u2014 rule order is what decides this.",
+      "action": {
+        "type": "refund_customer",
+        "amount_usd": 25
+      },
+      "context": {
+        "daily_spent_usd": 0
+      },
+      "expected_verdict": "DENY",
+      "expected_rule": "daily-cap-hard-deny"
+    },
+    {
+      "id": "refund-4-deny-cumulative-cap",
+      "policy": "customer-refunds",
+      "description": "A small refund is still denied when earlier refunds leave no room: $18 already spent + $4 = $22 projected, over the cap.",
+      "action": {
+        "type": "refund_customer",
+        "amount_usd": 4
+      },
+      "context": {
+        "daily_spent_usd": 18
+      },
+      "expected_verdict": "DENY",
+      "expected_rule": "daily-cap-hard-deny"
+    },
+    {
+      "id": "refund-6-approval-at-cap-edge",
+      "policy": "customer-refunds",
+      "description": "$14 already spent + $6 = exactly $20 projected: at the cap, not over it, so the verdict is approval (amount > $5), not denial.",
+      "action": {
+        "type": "refund_customer",
+        "amount_usd": 6
+      },
+      "context": {
+        "daily_spent_usd": 14
+      },
+      "expected_verdict": "REQUIRE_APPROVAL",
+      "expected_rule": "over-5-requires-approval"
+    },
+    {
+      "id": "pay-40-approved-allow",
+      "policy": "outbound-payments",
+      "description": "Approved vendor, small amount: proceeds.",
+      "action": {
+        "type": "issue_payment",
+        "amount_usd": 40,
+        "payee_approved": true
+      },
+      "context": {},
+      "expected_verdict": "ALLOW",
+      "expected_rule": "small-approved-payment-allow"
+    },
+    {
+      "id": "pay-250-approved-approval",
+      "policy": "outbound-payments",
+      "description": "Approved vendor but over the $100 auto-pay threshold.",
+      "action": {
+        "type": "pay_invoice",
+        "amount_usd": 250,
+        "payee_approved": true
+      },
+      "context": {},
+      "expected_verdict": "REQUIRE_APPROVAL",
+      "expected_rule": "over-100-requires-approval"
+    },
+    {
+      "id": "pay-30-unapproved-approval",
+      "policy": "outbound-payments",
+      "description": "Small amount does not save an unapproved vendor: approval is about who is being paid, not just how much.",
+      "action": {
+        "type": "issue_payment",
+        "amount_usd": 30,
+        "payee_approved": false
+      },
+      "context": {},
+      "expected_verdict": "REQUIRE_APPROVAL",
+      "expected_rule": "unapproved-vendor-requires-approval"
+    },
+    {
+      "id": "pay-750-approved-deny",
+      "policy": "outbound-payments",
+      "description": "Over the mandate's $500 hard maximum: denied even for an approved vendor.",
+      "action": {
+        "type": "issue_payment",
+        "amount_usd": 750,
+        "payee_approved": true
+      },
+      "context": {},
+      "expected_verdict": "DENY",
+      "expected_rule": "mandate-max-hard-deny"
+    },
+    {
+      "id": "pay-600-unapproved-deny-cap-first",
+      "policy": "outbound-payments",
+      "description": "Both the cap and the vendor rule match; the hard cap is checked first, so the verdict is DENY.",
+      "action": {
+        "type": "issue_payment",
+        "amount_usd": 600,
+        "payee_approved": false
+      },
+      "context": {},
+      "expected_verdict": "DENY",
+      "expected_rule": "mandate-max-hard-deny"
+    },
+    {
+      "id": "bank-change-no-callback-deny",
+      "policy": "vendor-bank-detail-changes",
+      "description": "The payment-diversion pattern: a bank-detail change requested with no verified callback is denied outright.",
+      "action": {
+        "type": "change_vendor_bank_details"
+      },
+      "context": {
+        "verified_callback_completed": false,
+        "dual_approval_completed": false
+      },
+      "expected_verdict": "DENY",
+      "expected_rule": "no-callback-deny"
+    },
+    {
+      "id": "bank-change-callback-pending-dual",
+      "policy": "vendor-bank-detail-changes",
+      "description": "Callback verified; the change now waits on the second human approver.",
+      "action": {
+        "type": "change_vendor_bank_details"
+      },
+      "context": {
+        "verified_callback_completed": true,
+        "dual_approval_completed": false
+      },
+      "expected_verdict": "REQUIRE_APPROVAL",
+      "expected_rule": "callback-done-dual-approval-pending"
+    },
+    {
+      "id": "bank-change-fully-verified-allow",
+      "policy": "vendor-bank-detail-changes",
+      "description": "Callback verified and dual approval recorded: the change may be applied.",
+      "action": {
+        "type": "change_vendor_bank_details"
+      },
+      "context": {
+        "verified_callback_completed": true,
+        "dual_approval_completed": true
+      },
+      "expected_verdict": "ALLOW",
+      "expected_rule": "callback-and-dual-approval-allow"
+    },
+    {
+      "id": "bank-change-unstated-deny-fallback",
+      "policy": "vendor-bank-detail-changes",
+      "description": "Verification state not stated at all: no rule matches and the fallback denies. Missing evidence is treated as absent evidence.",
+      "action": {
+        "type": "change_vendor_bank_details"
+      },
+      "context": {},
+      "expected_verdict": "DENY",
+      "expected_rule": null
+    },
+    {
+      "id": "db-delete-billing-deny",
+      "policy": "high-risk-database-writes",
+      "description": "Deletes against production billing are banned outright \u2014 there is no approval path in this policy.",
+      "action": {
+        "type": "database_write",
+        "operation": "delete",
+        "table_class": "production_billing"
+      },
+      "context": {},
+      "expected_verdict": "DENY",
+      "expected_rule": "billing-delete-hard-deny"
+    },
+    {
+      "id": "db-delete-users-approval",
+      "policy": "high-risk-database-writes",
+      "description": "A production delete outside billing: gated on human approval.",
+      "action": {
+        "type": "database_write",
+        "operation": "delete",
+        "table_class": "production_users"
+      },
+      "context": {},
+      "expected_verdict": "REQUIRE_APPROVAL",
+      "expected_rule": "production-delete-requires-approval"
+    },
+    {
+      "id": "db-update-orders-approval",
+      "policy": "high-risk-database-writes",
+      "description": "A production update: gated on human approval.",
+      "action": {
+        "type": "database_write",
+        "operation": "update",
+        "table_class": "production_orders"
+      },
+      "context": {},
+      "expected_verdict": "REQUIRE_APPROVAL",
+      "expected_rule": "production-write-requires-approval"
+    },
+    {
+      "id": "db-insert-audit-allow",
+      "policy": "high-risk-database-writes",
+      "description": "Appending to the audit log is allowed even though the table is production: the allow rule precedes the generic production-write gate on purpose.",
+      "action": {
+        "type": "database_write",
+        "operation": "insert",
+        "table_class": "production_audit_log"
+      },
+      "context": {},
+      "expected_verdict": "ALLOW",
+      "expected_rule": "audit-log-insert-allow"
+    },
+    {
+      "id": "db-update-staging-allow",
+      "policy": "high-risk-database-writes",
+      "description": "Non-production writes are open.",
+      "action": {
+        "type": "database_write",
+        "operation": "update",
+        "table_class": "staging"
+      },
+      "context": {},
+      "expected_verdict": "ALLOW",
+      "expected_rule": "non-production-allow"
+    },
+    {
+      "id": "db-write-unclassified-deny-fallback",
+      "policy": "high-risk-database-writes",
+      "description": "An unclassified table matches no rule: the fallback denies unclassified writes.",
+      "action": {
+        "type": "database_write",
+        "operation": "update",
+        "table_class": "unknown_external"
+      },
+      "context": {},
+      "expected_verdict": "DENY",
+      "expected_rule": null
+    },
+    {
+      "id": "task-20-approved-allow",
+      "policy": "task-spend-envelope",
+      "description": "In-envelope, approved category, small action: proceeds.",
+      "action": {
+        "type": "purchase",
+        "amount_usd": 20,
+        "category": "compute",
+        "category_approved": true
+      },
+      "context": {
+        "task_spent_usd": 10,
+        "task_budget_usd": 200
+      },
+      "expected_verdict": "ALLOW",
+      "expected_rule": "in-envelope-allow"
+    },
+    {
+      "id": "task-80-approved-approval",
+      "policy": "task-spend-envelope",
+      "description": "In-envelope and approved category, but a single action over $50 still needs approval.",
+      "action": {
+        "type": "purchase",
+        "amount_usd": 80,
+        "category": "compute",
+        "category_approved": true
+      },
+      "context": {
+        "task_spent_usd": 10,
+        "task_budget_usd": 200
+      },
+      "expected_verdict": "REQUIRE_APPROVAL",
+      "expected_rule": "over-50-requires-approval"
+    },
+    {
+      "id": "task-20-unapproved-category-approval",
+      "policy": "task-spend-envelope",
+      "description": "Money remains, but the category is outside the envelope's approved list.",
+      "action": {
+        "type": "book_service",
+        "amount_usd": 20,
+        "category": "travel",
+        "category_approved": false
+      },
+      "context": {
+        "task_spent_usd": 10,
+        "task_budget_usd": 200
+      },
+      "expected_verdict": "REQUIRE_APPROVAL",
+      "expected_rule": "unapproved-category-requires-approval"
+    },
+    {
+      "id": "task-30-over-envelope-deny",
+      "policy": "task-spend-envelope",
+      "description": "$180 already spent + $30 = $210 projected over the $200 envelope the task itself stated: denied.",
+      "action": {
+        "type": "purchase",
+        "amount_usd": 30,
+        "category": "compute",
+        "category_approved": true
+      },
+      "context": {
+        "task_spent_usd": 180,
+        "task_budget_usd": 200
+      },
+      "expected_verdict": "DENY",
+      "expected_rule": "envelope-exceeded-hard-deny"
+    },
+    {
+      "id": "task-budget-is-read-from-task",
+      "policy": "task-spend-envelope",
+      "description": "Same amounts as the denial case but a $500 envelope stated by the task: the limit comes from the task, not a hard-coded number, so this proceeds.",
+      "action": {
+        "type": "purchase",
+        "amount_usd": 30,
+        "category": "compute",
+        "category_approved": true
+      },
+      "context": {
+        "task_spent_usd": 180,
+        "task_budget_usd": 500
+      },
+      "expected_verdict": "ALLOW",
+      "expected_rule": "in-envelope-allow"
+    }
+  ]
+}

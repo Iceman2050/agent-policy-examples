@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-policy-examples"
+version = "0.1.0"
+description = "Versioned, testable AI-agent authorization policy examples (refunds, payments, vendor bank changes, database writes, spend envelopes) with a reference evaluator and expected-verdict fixtures."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Ingenious AI" }]
+keywords = ["ai-agents", "authorization", "policy-as-code", "agent-security", "access-control"]
+
+[project.scripts]
+agent-policy-examples = "policy_examples.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["policy_examples*"]

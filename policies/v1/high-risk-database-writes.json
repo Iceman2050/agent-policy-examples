@@ -1,0 +1,101 @@
+{
+  "applies_to": [
+    "database_write"
+  ],
+  "description": "Tiered rules for agent database writes, driven by the operation and the table class stated in the action. Deletes against the production billing tables are banned outright \u2014 no approval path exists in this policy, because a mistaken or manipulated delete there destroys the record the business runs on. Other production deletes and production updates need human approval. Appending to the production audit log is explicitly allowed (and listed BEFORE the generic production-update rule, so first-match ordering does not accidentally gate the audit trail itself). Non-production tables (staging, sandbox) are open.",
+  "fallback": "DENY",
+  "fallback_reason": "The table class was not recognised by this policy; unclassified writes are denied by default.",
+  "id": "high-risk-database-writes",
+  "rules": [
+    {
+      "id": "billing-delete-hard-deny",
+      "reason": "Deletes against production billing tables are never performed by an agent under this policy.",
+      "verdict": "DENY",
+      "when": [
+        {
+          "field": "operation",
+          "op": "eq",
+          "value": "delete"
+        },
+        {
+          "field": "table_class",
+          "op": "eq",
+          "value": "production_billing"
+        }
+      ]
+    },
+    {
+      "id": "production-delete-requires-approval",
+      "reason": "Deletes against production tables require human approval.",
+      "verdict": "REQUIRE_APPROVAL",
+      "when": [
+        {
+          "field": "operation",
+          "op": "eq",
+          "value": "delete"
+        },
+        {
+          "field": "table_class",
+          "op": "in",
+          "value": [
+            "production_users",
+            "production_orders",
+            "production_billing"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "audit-log-insert-allow",
+      "reason": "Appending to the audit log is the safe direction: it adds evidence and changes no business state.",
+      "verdict": "ALLOW",
+      "when": [
+        {
+          "field": "operation",
+          "op": "eq",
+          "value": "insert"
+        },
+        {
+          "field": "table_class",
+          "op": "eq",
+          "value": "production_audit_log"
+        }
+      ]
+    },
+    {
+      "id": "production-write-requires-approval",
+      "reason": "Writes to production tables (other than audit-log appends) require human approval.",
+      "verdict": "REQUIRE_APPROVAL",
+      "when": [
+        {
+          "field": "table_class",
+          "op": "in",
+          "value": [
+            "production_users",
+            "production_orders",
+            "production_billing",
+            "production_audit_log"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "non-production-allow",
+      "reason": "Non-production tables carry no production data; the agent may write freely.",
+      "verdict": "ALLOW",
+      "when": [
+        {
+          "field": "table_class",
+          "op": "in",
+          "value": [
+            "staging",
+            "sandbox",
+            "development"
+          ]
+        }
+      ]
+    }
+  ],
+  "title": "Database writes \u2014 production deletes gated, billing deletes banned, audit inserts open",
+  "version": "1.0.0"
+}

@@ -1,0 +1,49 @@
+{
+  "applies_to": [
+    "refund_customer"
+  ],
+  "description": "An agent may issue small customer refunds on its own. Refunds over $5 need a human's approval. Total refunds per day are hard-capped at $20: an action that would push the day's projected total over the cap is denied outright \u2014 approval cannot raise a hard cap. The daily-cap rule is listed FIRST on purpose: a $25 refund must be DENY (cap), not REQUIRE_APPROVAL, and first-match-wins ordering is what makes that true. The $12 -> REQUIRE_APPROVAL and $25 -> DENY cases are the same verdicts the live Agent Auth Gateway Policy Playground produces for this policy shape.",
+  "fallback": "DENY",
+  "fallback_reason": "No rule matched (for example, the amount was not stated); the policy denies by default.",
+  "id": "customer-refunds",
+  "rules": [
+    {
+      "id": "daily-cap-hard-deny",
+      "reason": "Projected daily refund total exceeds the $20/day hard cap. Hard caps are not approvable.",
+      "verdict": "DENY",
+      "when": [
+        {
+          "field": "projected_daily_total_usd",
+          "op": "gt",
+          "value": 20
+        }
+      ]
+    },
+    {
+      "id": "over-5-requires-approval",
+      "reason": "Refunds over $5 require human approval before they are issued.",
+      "verdict": "REQUIRE_APPROVAL",
+      "when": [
+        {
+          "field": "amount_usd",
+          "op": "gt",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "id": "small-refund-allow",
+      "reason": "Refund is at or under the $5 auto-approve threshold and inside the daily cap.",
+      "verdict": "ALLOW",
+      "when": [
+        {
+          "field": "amount_usd",
+          "op": "lte",
+          "value": 5
+        }
+      ]
+    }
+  ],
+  "title": "Customer refunds \u2014 $5 auto-approve, $20/day hard cap",
+  "version": "1.0.0"
+}

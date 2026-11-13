@@ -1,0 +1,67 @@
+{
+  "applies_to": [
+    "issue_payment",
+    "pay_invoice"
+  ],
+  "description": "A spending mandate for agent-issued payments. The mandate's hard maximum is $500 per payment: anything above it is denied, even for an approved vendor and even with a willing approver \u2014 raising it means amending the mandate, not approving an exception. Payments to a vendor who is not on the mandate's approved list always need human approval, whatever the amount. Approved-vendor payments over $100 also need approval; approved-vendor payments at or under $100 may proceed.",
+  "fallback": "DENY",
+  "fallback_reason": "No rule matched (for example, vendor approval status was not stated); the policy denies by default.",
+  "id": "outbound-payments",
+  "rules": [
+    {
+      "id": "mandate-max-hard-deny",
+      "reason": "Payment exceeds the mandate's $500 hard maximum. Amend the mandate instead of approving an exception.",
+      "verdict": "DENY",
+      "when": [
+        {
+          "field": "amount_usd",
+          "op": "gt",
+          "value": 500
+        }
+      ]
+    },
+    {
+      "id": "unapproved-vendor-requires-approval",
+      "reason": "The payee is not on the mandate's approved-vendor list, so a human must approve this payment.",
+      "verdict": "REQUIRE_APPROVAL",
+      "when": [
+        {
+          "field": "payee_approved",
+          "op": "eq",
+          "value": false
+        }
+      ]
+    },
+    {
+      "id": "over-100-requires-approval",
+      "reason": "Approved-vendor payments over $100 require human approval.",
+      "verdict": "REQUIRE_APPROVAL",
+      "when": [
+        {
+          "field": "amount_usd",
+          "op": "gt",
+          "value": 100
+        }
+      ]
+    },
+    {
+      "id": "small-approved-payment-allow",
+      "reason": "Approved vendor and at or under the $100 auto-pay threshold.",
+      "verdict": "ALLOW",
+      "when": [
+        {
+          "field": "payee_approved",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "field": "amount_usd",
+          "op": "lte",
+          "value": 100
+        }
+      ]
+    }
+  ],
+  "title": "Outbound payments \u2014 approved vendors, $100 auto-pay, $500 mandate max",
+  "version": "1.0.0"
+}

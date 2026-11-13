@@ -1,0 +1,59 @@
+{
+  "applies_to": [
+    "change_vendor_bank_details"
+  ],
+  "description": "Changing where a vendor gets paid is one of the highest-risk actions an agent can touch: it is the standard business-email-compromise / payment-diversion pattern. This policy encodes the two-step defence. Step one is a verified callback: the change must be confirmed out-of-band with a previously known contact at the vendor (the fixtures record this as verified_callback_completed, supplied by whatever verification workflow ran it \u2014 this example does not perform the callback). Without it, the change is denied, not merely queued. Step two is dual approval: with the callback verified, a second human must still approve before the change is applied.",
+  "fallback": "DENY",
+  "fallback_reason": "Verification state was not fully stated; the policy denies by default.",
+  "id": "vendor-bank-detail-changes",
+  "rules": [
+    {
+      "id": "no-callback-deny",
+      "reason": "No verified callback to a previously known vendor contact has been completed. Bank-detail changes are never applied on the strength of the request alone.",
+      "verdict": "DENY",
+      "when": [
+        {
+          "field": "verified_callback_completed",
+          "op": "eq",
+          "value": false
+        }
+      ]
+    },
+    {
+      "id": "callback-done-dual-approval-pending",
+      "reason": "Callback verified, but the required second approver has not signed off yet.",
+      "verdict": "REQUIRE_APPROVAL",
+      "when": [
+        {
+          "field": "verified_callback_completed",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "field": "dual_approval_completed",
+          "op": "eq",
+          "value": false
+        }
+      ]
+    },
+    {
+      "id": "callback-and-dual-approval-allow",
+      "reason": "Verified callback completed and dual approval recorded; the change may be applied.",
+      "verdict": "ALLOW",
+      "when": [
+        {
+          "field": "verified_callback_completed",
+          "op": "eq",
+          "value": true
+        },
+        {
+          "field": "dual_approval_completed",
+          "op": "eq",
+          "value": true
+        }
+      ]
+    }
+  ],
+  "title": "Vendor bank-detail changes \u2014 verified callback first, then dual approval",
+  "version": "1.0.0"
+}
