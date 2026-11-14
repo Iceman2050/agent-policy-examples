@@ -1,0 +1,78 @@
+{
+  "applies_to": [
+    "retry_action",
+    "repeat_action",
+    "replay_action"
+  ],
+  "description": "Retry permission for agent actions after a failure, a timeout or a lost acknowledgement. An action may be retried automatically only while it is proven idempotent (repeating it cannot create a second business operation) and under the retry ceiling of 3 attempts. A repeat of an action that is not proven idempotent is denied \u2014 an ambiguous external outcome must be reconciled against evidence first, never blindly replayed. A repeat of a sensitive action always needs fresh human approval: the approval given for the first attempt does not carry over to a retry.",
+  "fallback": "DENY",
+  "fallback_reason": "No rule matched (for example, the attempt number or idempotency status was not stated); the policy denies by default.",
+  "id": "retry-and-repeat-actions",
+  "rules": [
+    {
+      "id": "retry-ceiling-deny",
+      "reason": "Retry ceiling reached: more than 3 attempts at the same business operation. Stop retrying and escalate instead of attempting again.",
+      "verdict": "DENY",
+      "when": [
+        {
+          "field": "attempt_number",
+          "op": "gt",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "non-idempotent-repeat-deny",
+      "reason": "This is a repeat of an action that is not proven idempotent. Repeating it could create a second business operation; reconcile the original outcome from evidence first \u2014 never auto-replay.",
+      "verdict": "DENY",
+      "when": [
+        {
+          "field": "attempt_number",
+          "op": "gt",
+          "value": 1
+        },
+        {
+          "field": "idempotent",
+          "op": "eq",
+          "value": false
+        }
+      ]
+    },
+    {
+      "id": "repeat-sensitive-requires-approval",
+      "reason": "A repeat of a sensitive action needs fresh human approval; the approval for the first attempt does not carry over to retries.",
+      "verdict": "REQUIRE_APPROVAL",
+      "when": [
+        {
+          "field": "attempt_number",
+          "op": "gt",
+          "value": 1
+        },
+        {
+          "field": "sensitive",
+          "op": "eq",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "idempotent-retry-allow",
+      "reason": "The action is proven idempotent and the attempt is at or under the retry ceiling of 3, so (re)trying cannot create a second business operation.",
+      "verdict": "ALLOW",
+      "when": [
+        {
+          "field": "attempt_number",
+          "op": "lte",
+          "value": 3
+        },
+        {
+          "field": "idempotent",
+          "op": "eq",
+          "value": true
+        }
+      ]
+    }
+  ],
+  "title": "Retry and repeat actions \u2014 idempotency first, fresh approval for sensitive repeats",
+  "version": "1.0.0"
+}

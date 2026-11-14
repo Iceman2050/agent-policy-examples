@@ -1,6 +1,6 @@
 # agent-policy-examples
 
-Testable authorization policies for AI agents: five versioned policy files,
+Testable authorization policies for AI agents: six versioned policy files,
 26 test actions with expected verdicts, and a small runner that checks the
 policies actually produce the verdicts they claim.
 
@@ -41,7 +41,7 @@ tells you exactly which behaviours changed.
   (over the $20/day cap). Those two cases are in the fixtures by name, so
   the example cannot drift away from the behaviour it documents.
 
-## The five policies (v1)
+## The six policies (v1)
 
 | Policy | Governs | The shape of the rules |
 |---|---|---|
@@ -50,6 +50,7 @@ tells you exactly which behaviours changed.
 | `vendor-bank-detail-changes` | `change_vendor_bank_details` | No verified callback → **deny** · callback done, second approver pending → approval · both done → allow |
 | `high-risk-database-writes` | `database_write` | Billing-table deletes **denied outright** · other production deletes/updates → approval · audit-log inserts allowed · non-production open · unclassified → deny |
 | `task-spend-envelope` | `purchase`, `book_service`, `pay_invoice` | Projected task total over the task's own stated budget → **deny** · unapproved category → approval · single action > $50 → approval · small in-envelope → allow |
+| `retry-and-repeat-actions` | `retry_action`, `repeat_action`, `replay_action` | Attempt > 3 **denied** (retry ceiling) · repeat of a non-idempotent action **denied** (reconcile first, never auto-replay) · repeat of a sensitive action → fresh approval · proven-idempotent attempt ≤ 3 → allow |
 
 Every policy falls back to `DENY` when no rule matches. The full format —
 fields, condition operators, and why rule order is part of the meaning —
@@ -79,7 +80,7 @@ git clone https://github.com/Iceman2050/agent-policy-examples
 cd agent-policy-examples
 
 python -m policy_examples                  # run all 26 fixture cases
-python -m policy_examples --list-policies  # list the five policies
+python -m policy_examples --list-policies  # list the six policies
 python -m unittest discover -s tests -v    # the full test suite
 
 # your own cases against your own edited policies:
@@ -147,7 +148,7 @@ commands shown, not illustrations.)
 
 ## Exact supported scope
 
-- **Policies:** the five files in `policies/v1/`, in the JSON format
+- **Policies:** the six files in `policies/v1/`, in the JSON format
   documented in `docs/POLICY-FORMAT.md`. Operators: `eq`, `ne`, `lt`,
   `lte`, `gt`, `gte`, `in`, `not_in`; literal or context-field comparison
   values; two computed totals (daily, per-task).

@@ -366,6 +366,71 @@
       },
       "expected_verdict": "ALLOW",
       "expected_rule": "in-envelope-allow"
+    },
+    {
+      "id": "retry-first-attempt-idempotent-allow",
+      "policy": "retry-and-repeat-actions",
+      "description": "Original attempt of a proven-idempotent sensitive action: inside the retry ceiling, may proceed.",
+      "action": {
+        "type": "retry_action",
+        "attempt_number": 1,
+        "idempotent": true,
+        "sensitive": true
+      },
+      "expected_verdict": "ALLOW",
+      "expected_rule": "idempotent-retry-allow"
+    },
+    {
+      "id": "retry-second-idempotent-allow",
+      "policy": "retry-and-repeat-actions",
+      "description": "Second attempt after a lost acknowledgement; the action is proven idempotent, so no duplicate business operation can result.",
+      "action": {
+        "type": "retry_action",
+        "attempt_number": 2,
+        "idempotent": true,
+        "sensitive": false
+      },
+      "expected_verdict": "ALLOW",
+      "expected_rule": "idempotent-retry-allow"
+    },
+    {
+      "id": "retry-repeat-sensitive-requires-approval",
+      "policy": "retry-and-repeat-actions",
+      "description": "Retry of a sensitive action (a payment): idempotent, but a human must approve the repeat \u2014 the first approval does not carry over.",
+      "action": {
+        "type": "retry_action",
+        "attempt_number": 2,
+        "idempotent": true,
+        "sensitive": true
+      },
+      "expected_verdict": "REQUIRE_APPROVAL",
+      "expected_rule": "repeat-sensitive-requires-approval"
+    },
+    {
+      "id": "retry-non-idempotent-repeat-deny",
+      "policy": "retry-and-repeat-actions",
+      "description": "Repeat of an action not proven idempotent: denied \u2014 reconcile the original outcome first, never auto-replay.",
+      "action": {
+        "type": "retry_action",
+        "attempt_number": 2,
+        "idempotent": false,
+        "sensitive": false
+      },
+      "expected_verdict": "DENY",
+      "expected_rule": "non-idempotent-repeat-deny"
+    },
+    {
+      "id": "retry-ceiling-deny",
+      "policy": "retry-and-repeat-actions",
+      "description": "Fourth attempt at the same business operation exceeds the retry ceiling of 3, even though the action is idempotent: denied, escalate instead.",
+      "action": {
+        "type": "retry_action",
+        "attempt_number": 4,
+        "idempotent": true,
+        "sensitive": false
+      },
+      "expected_verdict": "DENY",
+      "expected_rule": "retry-ceiling-deny"
     }
   ]
 }

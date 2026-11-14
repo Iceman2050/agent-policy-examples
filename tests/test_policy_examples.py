@@ -64,7 +64,7 @@ class PolicyShapeTest(unittest.TestCase):
         cls.policies = evaluator.load_policies(POLICIES_DIR)
 
     def test_all_policies_validate_and_fall_back_to_deny(self):
-        self.assertEqual(5, len(self.policies))
+        self.assertEqual(6, len(self.policies))
         for policy in self.policies.values():
             self.assertEqual("DENY", policy["fallback"], policy["id"])
 

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Sixth example policy, `retry-and-repeat-actions` (GODMODE Weekly Intel
+  §2E): retry permission after a failure or lost acknowledgement —
+  proven-idempotent attempts up to a ceiling of 3 may proceed, a repeat of
+  a sensitive action needs fresh human approval, a repeat of a
+  non-idempotent action is denied (reconcile first, never auto-replay),
+  and attempts past the ceiling are denied.
+- 5 new fixture cases (31 total) asserting verdict AND deciding rule for
+  the retry policy.
+
 ## 0.1.0 — 2026-11-13
 
 - Initial release. Five versioned example policies (customer refunds,
